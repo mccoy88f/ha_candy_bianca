@@ -205,8 +205,8 @@ input_select:
 ################################################################# 
 
 rest:
-  - resource: "http://192.168.10.181/http-read.json?encrypted=2"
-    scan_interval: 1200
+  - resource: "http://{{ states('input_text.candy_bianca_ip') }}/http-read.json?encrypted=2"
+    scan_interval: 5
     sensor:
       - name: candy_bianca_WiFiStatus
         unique_id: candy_bianca_id0
