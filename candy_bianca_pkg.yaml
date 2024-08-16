@@ -4,7 +4,8 @@
 #                    Packages/washing CANDY BIANCA              #
 #                                                               #
 #################################################################
-
+#              16.08.2024 - Version 2.0 - Mccoy88f              #
+#       forked from: github.com/wariat85/hm_candy_bianca/       #
 #################################################################
 #                                                               #
 #                          Customize                            #
@@ -22,8 +23,6 @@ homeassistant:
 
       expose: &expose
         <<: *customize
-        haaska_hidden: false
-        homebridge_hidden: false
 
 #################################################################
 #                                                               #
@@ -51,6 +50,9 @@ group:
       - sensor.candy_bianca_DryT
       - sensor.candy_bianca_DelVal
       - sensor.candy_bianca_RemTime
+      - sensor.candy_bianca_TotalTime
+      - sensor.candy_bianca_RecipeId
+      - sensor.candy_bianca_CheckUpState
 
 
 #################################################################
@@ -64,74 +66,74 @@ input_text:
   candy_bianca_ip:
     name: Candy Bianca IP
     icon: 'mdi:ip-network-outline'
-    initial: 192.168.10.181
+    initial: 192.168.178.185
     
 timer:
   candy_bianca_washing_end:
-    name: Candy Bianca end Timer
+    name: Candy Bianca End Timer
     duration: "00:01:00"
 
 input_select:
 
   candy_phase:
-    name: Washing machine phase
+    name: Fase di lavaggio
     options:
-      - Unavailable
-      - Prewash
-      - Wash
-      - Rinse
-      - End
-      - Drying
-      - Error
-      - Steam
-      - Good Night
+      - Sconosciuta
+      - Prelavaggio
+      - Lavaggio
+      - Risciaquo
+      - Terminato
+      - Asciugatura
+      - Errore
+      - Vapore
+      - Buona notte
     icon: 'mdi:state-machine'
-    initial: Unavailable
+    initial: Sconosciuta
     
   candy_wifi:
-    name: Washing machine wifi status
+    name: Stato Wi-Fi
     options:
-      - No-Wifi
-      - Wifi
-      - Unavailable
+      - Non connesso
+      - Connesso
+      - Sconosciuto
     icon: 'mdi:wifi'
-    initial: Unavailable
+    initial: Sconosciuto
     
   candy_errors:
-    name: Washing machine errors
+    name: Presenza Errori
     options:
-      - Good
-      - Alert
-      - Unavailable
+      - Nessun errore
+      - Errore
+      - Sconosciuto
     icon: 'mdi:washing-machine-alert'
-    initial: Unavailable
+    initial: Sconosciuto
     
   candy_status:
-    name: Washing machine status
+    name: Stato Lavatrice
     options:
-      - Unavailable
-      - Stopped
-      - Washing
+      - Sconosciuto
+      - Fermo
+      - Lavaggio
       - Unknown_3
-      - Paused
-      - Delayed
+      - Pausa
+      - Programmato
       - Unknown_6
-      - Finished
+      - Terminato
     icon: 'mdi:washing-machine'
-    initial: Stopped    
+    initial: Fermo    
     
   candy_drymode:
-    name: Washing machine dry mode
+    name: Stato Asciugatrice
     options:
-      - None
+      - Nessuna
       - Extra asciutto
       - Pronto stiro
       - Pronto armadio
     icon: 'mdi:tumble-dryer'
-    initial: None
+    initial: Nessuna
     
   candy_spin:
-    name: Washing machine spin
+    name: Giri Centrifuga
     options:
       - '0'
       - 4
@@ -145,17 +147,17 @@ input_select:
     initial: 8
     
   candy_temp:
-    name: Washing machine temp
+    name: Temperatura di lavaggio
     options:
       - '0'
       - 20
       - 30
       - 40
     icon: 'mdi:thermometer'
-    initial: 20  
+    initial: 30  
     
   candy_program_label:
-    name: Washing machine Program
+    name: Programma Lavaggio
     options:
       - Perfect Rapid 14 Min.
       - Perfect Rapid 30 Min.
@@ -169,7 +171,7 @@ input_select:
     initial: Perfect Rapid 14 Min.      
     
   candy_program_url:
-    name: Washing machine Program
+    name: Programma Lavaggio Preset
     options:
       - 'PrNm=16&PrCode=7&PrStr=Rapido 14 Min.&SLevTgt=1&Dry=0'
       - 'PrNm=16&PrCode=7&PrStr=Rapido 30 Min.&SLevTgt=2&Dry=0'
@@ -183,7 +185,7 @@ input_select:
     initial: Other       
 
   candy_delay_val:
-    name: Washing machine Program
+    name: Programma Lavaggio Opzione
     options:
       - '0'
       - 1
@@ -205,8 +207,8 @@ input_select:
 ################################################################# 
 
 rest:
-  - resource: "http://{{ states('input_text.candy_bianca_ip') }}/http-read.json?encrypted=2"
-    scan_interval: 5
+  - resource: http://192.168.178.185/http-read.json?encrypted=2
+    scan_interval: 120
     sensor:
       - name: candy_bianca_WiFiStatus
         unique_id: candy_bianca_id0
@@ -309,12 +311,24 @@ rest:
       - name: candy_bianca_Temp
         unique_id: candy_bianca_id11
         icon: 'mdi:thermometer'
-        value_template: "{{ value_json['statusLavatrice']['Temp'] | int }}"
+        value_template: >
+          {% set temp = value_json['statusLavatrice']['Temp'] | int %}
+          {% if temp == 0 or temp is none %}
+            0
+          {% else %}
+            {{ temp }}
+          {% endif %}
         
       - name: candy_bianca_SpinSp
         unique_id: candy_bianca_id12
         icon: 'mdi:cached'
-        value_template: "{{ value_json['statusLavatrice']['SpinSp'] | int }}"
+        value_template: >
+          {% set spin = value_json['statusLavatrice']['SpinSp'] | int %}
+          {% if spin == 0 or spin is none %}
+            0
+          {% else %}
+            {{ spin }}
+          {% endif %}
         
       - name: candy_bianca_Steam
         unique_id: candy_bianca_id13
@@ -343,7 +357,29 @@ rest:
         icon: 'mdi:update'
         value_template: "{{ now() }}"
         
+      - name: candy_bianca_TotalTime
+        unique_id: candy_bianca_id18
+        icon: 'mdi:timer-sand'
+        value_template: "{{ ((value_json['statusLavatrice']['TotalTime'] | int) / 60 ) | int }}"
+        
+      - name: candy_bianca_RecipeId
+        unique_id: candy_bianca_id19
+        icon: 'mdi:identifier'
+        value_template: "{{ value_json['statusLavatrice']['RecipeId'] }}"
+        
+      - name: candy_bianca_CheckUpState
+        unique_id: candy_bianca_id20
+        icon: 'mdi:checkbox-marked-circle-outline'
+        value_template: "{{ value_json['statusLavatrice']['CheckUpState'] | int }}"
 
+binary_sensor:
+  - platform: ping
+    host: "{{ states('input_text.candy_bianca_ip') }}"
+    name: "Candy Bianca Online"
+    unique_id: candy_bianca_online
+    count: 2
+    scan_interval: 30
+    device_class: connectivity
 
 #################################################################
 #                                                               #
@@ -360,7 +396,12 @@ rest_command:
   candy_bianca_http_write_run:
     url: http://{{ states('input_text.candy_bianca_ip') }}/http-write.json?encrypted=0&data=Write=1&StSt=1&{{ state_attr('input_select.candy_program_url', 'options') [(state_attr('input_select.candy_program_label', 'options').index( states('input_select.candy_program_label') ))] }}&TmpTgt={{ states('input_select.candy_temp') }}&SpdTgt={{ states('input_select.candy_spin') }}&DelVl={{states('input_select.candy_delay_val') }}
     method: get
-    
+
+#http write run con gestione dell'acqua
+#  candy_bianca_http_write_run:
+#    url: http://{{ states('input_text.candy_bianca_ip') }}/http-write.json?encrypted=0&data=Write=1&StSt=1&{{ state_attr('input_select.candy_program_url', 'options')[(state_attr('input_select.candy_program_label', 'options').index(states('input_select.candy_program_label')))] }}&TmpTgt={{ states('input_select.candy_temp') }}&SpdTgt={{ states('input_select.candy_spin') }}&SLevTgt={{ states('input_select.candy_water_level') }}&DelVl={{ states('input_select.candy_delay_val') }}
+#    method: get
+
 #################################################################
 #                                                               #
 #                          AUTOMATION                           #
@@ -411,7 +452,7 @@ automation:
       trigger:
         - platform: state
           entity_id:
-           - sensor.candy_bianca_machmd_int
+           - sensor.candy_bianca_MachMd_int
           to: 7
       condition: []
       action:
@@ -450,35 +491,37 @@ automation:
       condition: []
       action:            
         - service: homeassistant.update_entity
-          entity_id: sensor.candy_bianca_MachM
-          
-    - id: candy_bianca__CHECK__update_remtime_restart_TIMER
-      initial_state: true
-      alias: candy_bianca__CHECK__update_remtime_restart_TIMER
-      description: "when the candy_bianca_remtime_value changed stop the timer and restart it with another value"
-      trigger:
-        - platform: state
-          entity_id:
-            - sensor.candy_bianca_remtime
-          enabled: true
-      condition: []
-      action:
-        - if:
-            - condition: template
-              value_template: "{{ states(\"sensor.candy_bianca_MachMd\") == \"Washing\" }}"
-          then:
-            - service: notify.mobile_app_s21_paolo
-              data:
-                message: prova reset timer {{ sensor.candy_bianca_remtime }}
-            - service: timer.cancel
-              data: {}
-              target:
-                entity_id: timer.candy_bianca_washing_end
-            - service: timer.start
-              data:
-                duration: "{{ states('sensor.candy_bianca_remtime') | int *60 }}"
-              target:
-                entity_id: timer.candy_bianca_washing_end
+          entity_id: sensor.candy_bianca_MachMd
 
+
+#################################################################
+#                                                               #
+#                          SCRIPT                               #
+#                                                               #
+#################################################################
+
+script:
+  update_washing_machine_sensors:
+    alias: "Aggiorna Sensori Lavatrice"
+    sequence:
+      - service: homeassistant.update_entity
+        target:
+          entity_id:
+            - sensor.candy_bianca_WiFiStatus
+            - sensor.candy_bianca_Err
+            - sensor.candy_bianca_MachMd
+            - sensor.candy_bianca_MachMd_int
+            - sensor.candy_bianca_Pr
+            - sensor.candy_bianca_PrCode
+            - sensor.candy_bianca_SLevel
+            - sensor.candy_bianca_PrPh
+            - sensor.candy_bianca_program
+            - sensor.candy_bianca_program_short
+            - sensor.candy_bianca_Temp
+            - sensor.candy_bianca_SpinSp
+            - sensor.candy_bianca_Steam
+            - sensor.candy_bianca_DryT
+            - sensor.candy_bianca_DelVal
+            - sensor.candy_bianca_RemTime
 
      
